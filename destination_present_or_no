@@ -1,0 +1,49 @@
+import PyPDF2
+
+def extract_hyperlinks_from_pdf(pdf_path):
+    """
+    FINDS IF THE DESTINATION IS PRESENT IN THE PDF OR NOT
+    Extracts all cross-reference links from a PDF file.
+
+    Args:
+        pdf_path (str): The file path of the PDF.
+
+    Returns:
+        list: A list of dictionaries containing the cross-reference text, page number, and presence of destination in PDF.
+    """
+    hyperlinks = []
+    with open(pdf_path, 'rb') as pdf_file:
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        destinations = pdf_reader.named_destinations
+        for page_num in range(len(pdf_reader.pages)):
+            page = pdf_reader.pages[page_num]
+            if '/Annots' in page:
+                for annot in page['/Annots']:
+                    obj = annot.get_object()
+                    if obj['/Subtype'] == '/Link':
+                        hyperlink_text = obj.get('/Contents', '')
+                        if '/Dest' in obj:
+                            hyperlink_page = obj['/Dest']
+                            destination_present = str(hyperlink_page) in destinations
+                        elif '/A' in obj and '/D' in obj['/A']:
+                            hyperlink_page = obj['/A']['/D']
+                            destination_present = str(hyperlink_page) in destinations
+                        else:
+                            hyperlink_page = ''
+                            destination_present = False
+                        if hyperlink_text or hyperlink_page:
+                            hyperlink = {
+                                'text': hyperlink_text,
+                                'page': hyperlink_page,
+                                'present_in_pdf': 'Yes' if destination_present else 'No'
+                            }
+                            hyperlinks.append(hyperlink)
+    return hyperlinks
+
+pdf_path = 'Slingshot.pdf'  
+hyperlinks = extract_hyperlinks_from_pdf(pdf_path)
+for hyperlink in hyperlinks:
+    print('Hyperlink Text:', hyperlink['text'])
+    print('Page Number:', hyperlink['page'])
+    print('Present in PDF:', hyperlink['present_in_pdf'])
+    print('-----')
