@@ -1,0 +1,37 @@
+import PyPDF2
+
+def extract_hyperlinks_from_pdf(pdf_path):
+    """
+    Extracts all hyperlinks from a PDF file.
+
+    Args:
+        pdf_path (str): The file path of the PDF.
+
+    Returns:
+        list: A list of dictionaries containing the hyperlink text and URL.
+    """
+    hyperlinks = []
+    with open(pdf_path, 'rb') as pdf_file:
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        for page in pdf_reader.pages:
+            if '/Annots' in page:
+                for annot in page['/Annots']:
+                    obj = annot.get_object()
+                    if obj['/Subtype'] == '/Link':
+                        hyperlink_text = obj.get('/Contents', '')
+                        hyperlink_url = obj['/A'].get('/URI', '')
+                        if hyperlink_text or hyperlink_url:
+                            hyperlink = {
+                                'text': hyperlink_text,
+                                'url': hyperlink_url
+                            }
+                            hyperlinks.append(hyperlink)
+    return hyperlinks
+
+
+pdf_path = 'Slingshot.pdf'  
+hyperlinks = extract_hyperlinks_from_pdf(pdf_path)
+for hyperlink in hyperlinks:
+    # print('Text:', hyperlink['text'])
+    print('URL:', hyperlink['url'])
+    print('---')
