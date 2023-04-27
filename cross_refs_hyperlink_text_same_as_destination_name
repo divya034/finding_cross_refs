@@ -1,0 +1,63 @@
+import PyPDF2
+
+def extract_hyperlinks_from_pdf(pdf_path):
+    """
+    Extracts all cross-reference links from a PDF file.
+
+    Args:
+        pdf_path (str): The file path of the PDF.
+
+    Returns:
+        list: A list of dictionaries containing the cross-reference text, page number, presence of destination in PDF,
+        and location of the hyperlink on the page (if available).
+    """
+    hyperlinks = []
+    with open(pdf_path, 'rb') as pdf_file:
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        destinations = pdf_reader.named_destinations
+        for page_num in range(len(pdf_reader.pages)):
+            page = pdf_reader.pages[page_num]
+            if '/Annots' in page:
+                annots = page['/Annots']
+                if annots:
+                    if not isinstance(annots, list):
+                        annots = [annots]
+                    for annot in annots:
+                        obj = annot.get_object()
+                        if obj['/Subtype'] == '/Link':
+                            hyperlink_text = obj.get('/A').get('/URI', '') or obj.get('/A').get('/D', '')
+                            if '/Dest' in obj:
+                                hyperlink_page = obj['/Dest']
+                                destination_present = str(hyperlink_page) in destinations
+                            elif '/A' in obj and '/D' in obj['/A']:
+                                hyperlink_page = obj['/A']['/D']
+                                destination_present = str(hyperlink_page) in destinations
+                            else:
+                                hyperlink_page = ''
+                                destination_present = False
+
+                            # Get the location of the hyperlink on the page
+                            location = ''
+                            if obj.get('/Rect'):
+                                rect = obj['/Rect']
+                                if rect and len(rect) == 4:
+                                    location = 'Page: {}, Coordinates: ({},{},{},{})'.format(page_num + 1, rect[0], rect[1], rect[2], rect[3])
+
+                            if hyperlink_text or hyperlink_page:
+                                hyperlink = {
+                                    'text': hyperlink_text,
+                                    'page': hyperlink_page,
+                                    'present_in_pdf': 'Yes' if destination_present else 'No',
+                                    'location': location
+                                }
+                                hyperlinks.append(hyperlink)
+    return hyperlinks
+
+pdf_path = input("Enter the file path of the PDF: ")
+hyperlinks = extract_hyperlinks_from_pdf(pdf_path)
+for hyperlink in hyperlinks:
+    print('Hyperlink Text:', hyperlink['text'])
+    print('Destination ID Name:', hyperlink['page'])
+    print('Destination present in PDF:', hyperlink['present_in_pdf'])
+    print('Location of the Hyperlink:', hyperlink['location'])
+    print('-----')
